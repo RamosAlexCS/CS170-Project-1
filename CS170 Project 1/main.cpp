@@ -447,7 +447,7 @@ Node* Fill_Puzzle() {
 	return t;
 }
 
-//Create children from branching children
+//Create children from branching parent
 Node* Branch_Parent(Node* parent) {
 	Node* child = new Node(parent->puzzle, priority, parent->g_cost, parent->h_cost);
 	priority++;
@@ -468,7 +468,7 @@ void Puzzle_Mangement(Node* Parent) {
 	while (!Goal_Puzzle(Parent->puzzle)) {
 		current_time = time(NULL);
 		timer = current_time - start;
-		if (timer >= 900) { //15 min timer
+		if (timer >= 900) { //15 min timer in sec //Just change 900 to the desired time in sec
 			searching = false;
 			break;
 		}
