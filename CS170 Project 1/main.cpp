@@ -9,12 +9,13 @@ struct Node {
 	int id;
 	int g_cost;
 	int h_cost;
+	int f_cost;
 	Node* up;
 	Node* down;
 	Node* left;
 	Node* right;
 	Node* prev;
-	Node(vector<vector<int>> puzzle, int id, int g_cost, int h_cost) :puzzle(puzzle), id(id), g_cost(g_cost), h_cost(h_cost), up(0), down(0), left(0), right(0), prev(0) {}
+	Node(vector<vector<int>> puzzle, int id, int g_cost, int h_cost, int f_cost) :puzzle(puzzle), id(id), g_cost(g_cost), h_cost(h_cost), f_cost(f_cost), up(0), down(0), left(0), right(0), prev(0) {}
 };
 
 void PrintMenu();
@@ -32,7 +33,6 @@ void Tile_Left(Node*);
 void Tile_Right(Node*);
 void Remove_First_Priority();
 void Sort_Priority(int, int);
-int Calc_f(int, int);
 Node* Find_Id();
 Node* Fill_Puzzle();
 Node* Branch_Parent(Node*);
@@ -101,7 +101,6 @@ void PrintMenu() {
 					while (Method != "Q") {
 						Algorithm_Method();
 						if (Method != "Q") {
-							curr->h_cost = Calc_h(curr->puzzle);
 							Puzzle_Mangement(curr);
 						}
 					}
@@ -121,13 +120,12 @@ void PrintMenu() {
 			while (Method != "Q") {
 				Algorithm_Method();
 				if (Method != "Q") {
-					curr->h_cost = Calc_h(curr->puzzle);
 					Puzzle_Mangement(curr);
 				}
 			}
 			List.clear();
 			order.clear();
-			
+
 			break;
 		}
 	}
@@ -166,10 +164,9 @@ void Print_Puzzle(vector<vector<int>> print) {
 		}
 		cout << "]\n";
 	}
-	//cout << "------------\n\n";
 }
 
-//Checking if the puzzle is the correct puzzle
+//Checking if the current puzzle is the correct puzzle
 bool Goal_Puzzle(vector<vector<int>> curr_puzzle) {
 	if (curr_puzzle == correct_puzzle) {
 		return true;
@@ -201,7 +198,7 @@ void Find_Int(vector<vector<int>> curr_puzzle, int target) {
 	}
 }
 
-//Check if I can move 0
+//Check if 0 can move in the direction
 bool Move_Up() {
 	if (coordinate.first == 0) {
 		return false;
@@ -251,8 +248,9 @@ void Tile_Up(Node* parent) {
 			child->prev = parent;
 			child->g_cost++;
 			child->h_cost = Calc_h(child->puzzle);
+			child->f_cost = child->g_cost + child->h_cost;
 			List.push_back(child);
-			Sort_Priority(child->id, Calc_f(child->g_cost, child->h_cost));
+			Sort_Priority(child->id, child->f_cost);
 		}
 		else {
 			parent->up = NULL;
@@ -284,8 +282,9 @@ void Tile_Down(Node* parent) {
 			child->prev = parent;
 			child->g_cost++;
 			child->h_cost = Calc_h(child->puzzle);
+			child->f_cost = child->g_cost + child->h_cost;
 			List.push_back(child);
-			Sort_Priority(child->id, Calc_f(child->g_cost, child->h_cost));
+			Sort_Priority(child->id, child->f_cost);
 		}
 		else {
 			parent->down = NULL;
@@ -315,8 +314,9 @@ void Tile_Left(Node* parent) {
 			child->prev = parent;
 			child->g_cost++;
 			child->h_cost = Calc_h(child->puzzle);
+			child->f_cost = child->g_cost + child->h_cost;
 			List.push_back(child);
-			Sort_Priority(child->id, Calc_f(child->g_cost, child->h_cost));
+			Sort_Priority(child->id, child->f_cost);
 		}
 		else {
 			parent->left = NULL;
@@ -346,8 +346,9 @@ void Tile_Right(Node* parent) {
 			child->prev = parent;
 			child->g_cost++;
 			child->h_cost = Calc_h(child->puzzle);
+			child->f_cost = child->g_cost + child->h_cost;
 			List.push_back(child);
-			Sort_Priority(child->id, Calc_f(child->g_cost, child->h_cost));
+			Sort_Priority(child->id, child->f_cost);
 		}
 		else {
 			parent->right = NULL;
@@ -367,7 +368,7 @@ void Remove_First_Priority() {
 	order.pop_back();
 }
 
-//Sort the priority of new children nodes with other created nodes
+//Sort the priority of new children nodes with previously created nodes
 void Sort_Priority(int identification, int f) {
 	int temp1;
 	int temp2;
@@ -375,7 +376,7 @@ void Sort_Priority(int identification, int f) {
 	bool flag = false;
 
 	for (i = 0; i < order.size(); i++) {
-		if (f < order.at(i).second) {
+		if (f <= order.at(i).second) {
 			temp1 = order.at(i).first;
 			temp2 = order.at(i).second;
 			order.at(i).first = identification;
@@ -403,12 +404,7 @@ void Sort_Priority(int identification, int f) {
 	order.push_back(temp);
 }
 
-//Calculate f cost
-int Calc_f(int x, int y) {
-	return x + y;
-}
-
-//Return the node id of the smallest f_cost place
+//Return the node that currently has the smallest f_cost place with id
 Node* Find_Id() {
 	int identification = order.at(0).first;
 	for (int i = 0; i < List.size(); i++) {
@@ -439,48 +435,44 @@ Node* Fill_Puzzle() {
 		User_Row.clear();
 	}
 
-	Node* t = new Node(User_Puzzle, 0, 0, Calc_h(User_Puzzle));
+	Node* t = new Node(User_Puzzle, 0, 0, Calc_h(User_Puzzle), Calc_h(User_Puzzle));
 	t->prev = NULL;
 	List.push_back(t);
-	Sort_Priority(0, Calc_f(t->g_cost, t->h_cost));
+	Sort_Priority(0, t->f_cost);
 
 	return t;
 }
 
 //Create children from branching parent
 Node* Branch_Parent(Node* parent) {
-	Node* child = new Node(parent->puzzle, priority, parent->g_cost, parent->h_cost);
+	Node* child = new Node(parent->puzzle, priority, parent->g_cost, parent->h_cost, parent->f_cost);
 	priority++;
 	return child;
 }
 
-//Solve puzzle
+//Solve puzzle //Main function that solves the puzzle
 void Puzzle_Mangement(Node* Parent) {
 	time_t start;
 	time_t current_time;
-	start = time(NULL);
-	current_time = time(NULL);
-	int timer = current_time - start;
+	int timer = 0;
+	int time_check_min = 0;
 	int check_in = 0;
 	bool searching = true;
-	bool time_check = false;
+	start = time(NULL);
 
 	while (!Goal_Puzzle(Parent->puzzle)) {
 		current_time = time(NULL);
 		timer = current_time - start;
+
 		if (timer >= 900) { //15 min timer in sec //Just change 900 to the desired time in sec
 			searching = false;
 			break;
 		}
 
-		int time_check_min = timer / 60;
-		if (!time_check && time_check_min != check_in && time_check_min != 0) {
+		time_check_min = timer / 60;
+		if (time_check_min != check_in) {
 			check_in = time_check_min;
-			time_check = true;
-		}
-		if (time_check) {
 			cout << check_in << " minute(s) have passed" << endl;
-			time_check = false;
 		}
 
 		Remove_First_Priority();
@@ -506,21 +498,21 @@ void Puzzle_Mangement(Node* Parent) {
 
 		int min = timer / 60;
 		int sec = timer % 60;
-		cout << "It took " << min << " minutes and " << sec << " seconds to solve this puzzle" << endl;
+		cout << "It took " << min << " minute(s) and " << sec << " second(s) to solve this puzzle" << endl;
 	}
 	else {
-		cout << "Could not find solution within 15 minutes" << endl;
+		cout << "Could not find solution within " << timer / 60 << " minute(s)" << endl;
 	}
 
 	priority = 1;
 	Node* save = List.at(0);
 	pair<int, int> original;
 	original.first = save->id;
-	original.second = Calc_f(save->g_cost, save->h_cost);
+	original.second = save->f_cost;
 
 	List.clear();
 	order.clear();
-	
+
 	List.push_back(save);
 	order.push_back(original);
 }
@@ -535,7 +527,7 @@ bool Duplicate_Check(vector<vector<int>> check) {
 	return false;
 }
 
-//Picking which algorithm
+//Picking which algorithm to use to solve the puzzle
 void Algorithm_Method() {
 	Method = '\0';
 	cout << "\nWhich algorithm would you like to use to solve the current puzzle:\n";
@@ -661,15 +653,15 @@ Node* Preset_Puzzle() {
 	}
 
 	puzzle_size = Preset.size();
-	Node* t = new Node(Preset, 0, 0, 0);
+	Node* t = new Node(Preset, 0, 0, Calc_h(Preset), Calc_h(Preset));
 	t->prev = NULL;
 	List.push_back(t);
-	Sort_Priority(0, Calc_f(t->g_cost, t->h_cost));
+	Sort_Priority(0, t->f_cost);
 
 	return t;
 }
 
-//Print backtracking to print from original puzzle to solved
+//Print backtracking to print moves made from original puzzle to solved
 void Traceback(Node* trace) {
 	vector<Node*> tracing;
 
